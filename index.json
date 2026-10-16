@@ -1,0 +1,31 @@
+{
+  "name": "BEHR STORE",
+  "catalogVersion": 1,
+  "updatedAt": "2026-10-16",
+  "apps": [
+    {
+      "id": "behr-files",
+      "name": "BeHR Files",
+      "version": "0.1.0",
+      "type": "app",
+      "emoji": "📁",
+      "category": "Инструменты",
+      "description": "Файловый менеджер для Android. APK пока не опубликован.",
+      "apk": "",
+      "minAndroid": 8,
+      "sha256": ""
+    },
+    {
+      "id": "space-game",
+      "name": "Space Game",
+      "version": "0.1.0",
+      "type": "game",
+      "emoji": "🚀",
+      "category": "Аркада",
+      "description": "Пример карточки игры. Добавь APK, когда релиз будет готов.",
+      "apk": "",
+      "minAndroid": 8,
+      "sha256": ""
+    }
+  ]
+}
