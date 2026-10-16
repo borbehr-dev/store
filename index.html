@@ -19,14 +19,90 @@ header{display:flex;align-items:center;gap:12px;padding:20px 0 16px}.logo{width:
 const OWNER="borbehr-dev",REPO="store",BRANCH="main",INDEX_PATH="index.json";
 const RAW_BASE=`https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/`,REPO_URL=`https://github.com/${OWNER}/${REPO}`;
 let apps=[],activeFilter="all";const $=id=>document.getElementById(id);
+
+// Проверка среды: запущено ли приложение в вашей нативной оболочке (org.ru.borbehr.behrstore)
+const isNativeApp = navigator.userAgent.includes("BeHRStoreApp") || window.AndroidBridge !== undefined;
+
 function toast(msg){let e=$("toast");e.textContent=msg;e.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.style.display="none",2500)}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function urlFor(path){if(!path)return null;try{let u=new URL(path,RAW_BASE);return u.href.startsWith("https://raw.githubusercontent.com/")?u.href:null}catch{return null}}
-function render(){let q=$("search").value.trim().toLowerCase();let list=apps.filter(a=>(activeFilter==="all"||a.type===activeFilter)&&`${a.name||""} ${a.description||""} ${a.category||""}`.toLowerCase().includes(q));$("count").textContent=`${list.length} из ${apps.length}`;if(!list.length){$("catalog").innerHTML='<div class="empty">Ничего не найдено.</div>';return}
-$("catalog").innerHTML=list.map(a=>{let valid=!!urlFor(a.apk||"");return `<article class="card"><div class="cardtop"><div class="appicon">${esc(a.emoji||(a.type==="game"?"🎮":"📦"))}</div><div class="details"><div class="appname">${esc(a.name||"Без названия")}</div><div class="meta">v${esc(a.version||"0.0.0")} · ${a.type==="game"?"Игра":"Приложение"}</div></div></div><div class="details"><div class="desc">${esc(a.description||"Описание пока не добавлено.")}</div><div class="tags"><span class="tag">${esc(a.category||"Каталог")}</span><span class="tag">${valid?"APK указан":"Скоро появится"}</span></div></div><div class="cardaction"><button class="mini" ${valid?"":"disabled"} data-download="${esc(a.apk||"")}">${valid?"Скачать APK":"Нет APK"}</button><button class="mini" data-info="${esc(a.id||"")}">Подробнее</button></div></article>`}).join("");
-$("catalog").querySelectorAll("[data-download]").forEach(b=>b.onclick=()=>{let u=urlFor(b.dataset.download);if(u)window.open(u,"_blank","noopener");else toast("Неверный путь к APK")});
-$("catalog").querySelectorAll("[data-info]").forEach(b=>b.onclick=()=>{let a=apps.find(x=>x.id===b.dataset.info);if(a)toast(`${a.name} · версия ${a.version||"?"}`)})}
-async function loadCatalog(){$("status").textContent="Загрузка каталога…";$("catalog").innerHTML='<div class="empty">Загружаем приложения…</div>';try{let r=await fetch(RAW_BASE+INDEX_PATH+"?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw Error("GitHub HTTP "+r.status);let d=await r.json();if(!Array.isArray(d.apps))throw Error("В index.json отсутствует массив apps");apps=d.apps.filter(x=>x&&typeof x==="object");render();$("status").textContent=`Каталог обновлён · ${new Date().toLocaleString("ru-RU")} · ${REPO}`}catch(e){$("catalog").innerHTML='<div class="empty">Не удалось загрузить каталог.<br>Проверь имя репозитория и index.json.</div>';$("count").textContent="—";$("status").textContent="Ошибка: "+e.message}}
-$("refresh").onclick=loadCatalog;$("check").onclick=async()=>{await loadCatalog();toast("Каталог обновлён")};$("repo").onclick=()=>window.open(REPO_URL,"_blank","noopener");$("search").oninput=render;
-$("filters").querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{activeFilter=b.dataset.filter;$("filters").querySelectorAll(".filter").forEach(x=>x.classList.toggle("active",x===b));render()});loadCatalog();
+
+function render(){
+    let q=$("search").value.trim().toLowerCase();
+    let list=apps.filter(a=>(activeFilter==="all"||a.type===activeFilter)&&`${a.name||""} ${a.description||""} ${a.category||""}`.toLowerCase().includes(q));
+    $("count").textContent=`${list.length} из ${apps.length}`;
+    if(!list.length){$("catalog").innerHTML='<div class="empty">Ничего не найдено.</div>';return}
+    
+    $("catalog").innerHTML=list.map(a=>{
+        let valid=!!urlFor(a.apk||"");
+        let btnText = "Нет APK";
+        let btnAction = "";
+        
+        if (valid) {
+            if (isNativeApp) {
+                btnText = "Установить";
+                btnAction = `data-install="${esc(a.apk||"")}" data-name="${esc(a.name||"")}"`;
+            } else {
+                btnText = "Скачать APK";
+                btnAction = `data-download="${esc(a.apk||"")}"`;
+            }
+        }
+        
+        return `<article class="card"><div class="cardtop"><div class="appicon">${esc(a.emoji||(a.type==="game"?"🎮":"📦"))}</div><div class="details"><div class="appname">${esc(a.name||"Без названия")}</div><div class="meta">v${esc(a.version||"0.0.0")} · ${a.type==="game"?"Игра":"Приложение"}</div></div></div><div class="details"><div class="desc">${esc(a.description||"Описание пока не добавлено.")}</div><div class="tags"><span class="tag">${esc(a.category||"Каталог")}</span><span class="tag">${valid?"APK указан":"Скоро появится"}</span></div></div><div class="cardaction"><button class="mini" ${valid?"":"disabled"} ${btnAction}>${btnText}</button><button class="mini" data-info="${esc(a.id||"")}">Подробнее</button></div></article>`;
+    }).join("");
+
+    // Обработчик скачивания для браузера
+    $("catalog").querySelectorAll("[data-download]").forEach(b=>b.onclick=()=>{
+        let u=urlFor(b.dataset.download);
+        if(u) window.open(u,"_blank","noopener");
+        else toast("Неверный путь к APK");
+    });
+
+    // Обработчик установки для нативного приложения
+    $("catalog").querySelectorAll("[data-install]").forEach(b=>b.onclick=()=>{
+        let u=urlFor(b.dataset.install);
+        let name=b.dataset.name;
+        if(window.AndroidBridge && typeof window.AndroidBridge.installApk === 'function') {
+            window.AndroidBridge.installApk(u, name);
+        } else {
+            // Запасной вариант, если нативный мост не подключен
+            window.open(u, "_blank", "noopener");
+            toast(`Запуск установки: ${name}`);
+        }
+    });
+
+    $("catalog").querySelectorAll("[data-info]").forEach(b=>b.onclick=()=>{
+        let a=apps.find(x=>x.id===b.dataset.info);
+        if(a) toast(`${a.name} · версия ${a.version||"?"}`);
+    })
+}
+
+async function loadCatalog(){
+    $("status").textContent="Загрузка каталога…";
+    $("catalog").innerHTML='<div class="empty">Загружаем приложения…</div>';
+    try{
+        let r=await fetch(RAW_BASE+INDEX_PATH+"?t="+Date.now(),{cache:"no-store"});
+        if(!r.ok)throw Error("GitHub HTTP "+r.status);
+        let d=await r.json();
+        if(!Array.isArray(d.apps))throw Error("В index.json отсутствует массив apps");
+        apps=d.apps.filter(x=>x&&typeof x==="object");
+        render();
+        $("status").textContent=`Каталог обновлён · ${new Date().toLocaleString("ru-RU")} · ${REPO} (${isNativeApp ? "App" : "Web"})`;
+    }catch(e){
+        $("catalog").innerHTML='<div class="empty">Не удалось загрузить каталог.<br>Проверь имя репозитория и index.json.</div>';
+        $("count").textContent="—";
+        $("status").textContent="Ошибка: "+e.message;
+    }
+}
+
+$("refresh").onclick=loadCatalog;
+$("check").onclick=async()=>{await loadCatalog();toast("Каталог обновлён")};
+$("repo").onclick=()=>window.open(REPO_URL,"_blank","noopener");
+$("search").oninput=render;
+$("filters").querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{
+    activeFilter=b.dataset.filter;
+    $("filters").querySelectorAll(".filter").forEach(x=>x.classList.toggle("active",x===b));
+    render()
+});
+loadCatalog();
 </script></body></html>
