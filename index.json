@@ -6,24 +6,12 @@
     {
       "id": "behr-files",
       "name": "BeHR Files",
-      "version": "0.1.0",
+      "version": "2.1",
       "type": "app",
       "emoji": "📁",
       "category": "Инструменты",
-      "description": "Файловый менеджер для Android. APK пока не опубликован.",
-      "apk": "",
-      "minAndroid": 8,
-      "sha256": ""
-    },
-    {
-      "id": "space-game",
-      "name": "Space Game",
-      "version": "0.1.0",
-      "type": "game",
-      "emoji": "🚀",
-      "category": "Аркада",
-      "description": "Пример карточки игры. Добавь APK, когда релиз будет готов.",
-      "apk": "",
+      "description": "Файловый менеджер для Android.",
+      "apk": "apks/behrfiles/Файловый менеджер_2_1.apk",
       "minAndroid": 8,
       "sha256": ""
     }
